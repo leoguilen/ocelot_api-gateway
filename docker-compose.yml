@@ -1,0 +1,92 @@
+version: '3.5'
+
+services:
+  gateway-api:
+    build: Microservicos.APIGateway/
+    container_name: gateway-api
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on:
+      - authentication-api
+      - customer-api
+      - seq
+    networks:
+      - microservices-net
+
+  # Authentication Service
+  authentication-api:
+    build: Microservicos.AuthenticationService/
+    container_name: authentication-api
+    restart: always
+    depends_on:
+      - authentication-db
+      - seq
+    networks:
+      - microservices-net
+
+  authentication-db:
+    image: mcr.microsoft.com/mssql/server:2019-GA-ubuntu-16.04
+    container_name: authentication-db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Master2020#
+      - MSSQL_TCP_PORT=1433
+    ports:
+      - "1433:1433"
+    networks:
+      - microservices-net
+
+  # Customer Service
+  customer-api:
+    build: Microservicos.CustomerService/
+    container_name: customer-api
+    restart: always
+    depends_on:
+      - customer-db
+      - seq
+    networks:
+      - microservices-net
+
+  customer-db:
+    image: postgres
+    container_name: customer-db
+    environment:
+      - POSTGRES_DB=CustomerDb
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=Master#2020
+    ports:
+      - "5432:5432"
+    networks:
+      - microservices-net
+
+  # Healthcheck
+  healthcheck:
+    build: Microservicos.HealthCheck/
+    container_name: healthcheck
+    restart: always
+    ports:
+      - "5050:5050"
+    depends_on:
+      - authentication-api
+      - customer-api
+      - customer-db
+      - authentication-db
+      - gateway-api
+      - seq
+    networks:
+      - microservices-net
+
+  seq:
+    image: datalust/seq
+    container_name: seq
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - "5341:80"
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    name: microservices-net
